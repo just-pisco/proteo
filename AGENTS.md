@@ -173,6 +173,28 @@ config). The kscreen-doctor sequence above remains the daemon-independent last r
 - Config: `/etc/proteo/config.toml` overridden by `~/.config/proteo/config.toml`;
   defaults in `proteo/core/config.py` (notably `physical_during_stream = "disable"`).
 
+## Host (Sunshine) capture backend — REQUIRED setting
+
+Sunshine's default KMS capture **cannot stream from the EVDI virtual device**: evdi has
+no render node, so KMS grab yields a frozen first frame (`No render device name for
+/dev/dri/cardX`) and the cursor — a separate hardware plane — never appears (`Cursor
+plane spans multiple CRTCs!`). Symptom: client sees a static desktop, no cursor, while
+the app audibly runs. wlgrab (`wlr`) is also unusable on KWin (no wlr-export-dmabuf).
+
+Fix, in `~/.config/sunshine/sunshine.conf`:
+
+```
+capture = kwin
+```
+
+The `kwin` backend (kwingrab) uses KWin's `zkde_screencast_unstable_v1` over PipeWire —
+compositor-rendered frames, cursor composited in. The KWin permission file ships with
+Sunshine's .deb (`/usr/share/applications/dev.lizardbyte.app.Sunshine.kwin.desktop`,
+`X-KDE-Wayland-Interfaces=zkde_screencast_unstable_v1`). Verified on Sunshine v2026.516:
+kwingrab finds the permission file, creates the PipeWire stream (DMA-BUF), and encoder
+validation passes (h264/hevc_vulkan on RADV). Valid `capture` values in this build:
+nvfbc, wlr, kwin, kms, x11, portal — `portal` is the fallback if kwingrab ever breaks.
+
 ## Way of working
 
 - Phased plan: 0 = spike (gate), 1 = core+adapter, 2 = robustness/failsafe,

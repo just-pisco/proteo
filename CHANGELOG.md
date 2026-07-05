@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- First real Moonlight session showed a frozen desktop with an invisible cursor while
+  audio proved the app was running. Diagnosis: Proteo/KWin were fine (a screenshot
+  confirmed Steam Big Picture rendering full-screen on the virtual output); the fault
+  was Sunshine's default **KMS capture**, which cannot read from the EVDI device (no
+  render node → `No render device name for /dev/dri/cardX`, frozen first frame; cursor
+  on a separate hardware plane → `Cursor plane spans multiple CRTCs!`). Fix: set
+  `capture = kwin` in `sunshine.conf` — the KWin ScreenCast backend streams
+  compositor-rendered frames via PipeWire (DMA-BUF), cursor included. Verified:
+  kwingrab binds `zkde_screencast_unstable_v1` via Sunshine's shipped permission file
+  and encoder validation passes (h264/hevc_vulkan on RADV). Documented in `README.md`
+  and `AGENTS.md`.
+
 ### Planned
 - Phase 4: opt-in HDR support on the virtual display.
 
