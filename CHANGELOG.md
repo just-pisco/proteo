@@ -30,6 +30,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`Fatal: Hang detected!`) and crashed without running `proteo undo`; proteo-guard
   detected the dead host and restored the physical displays automatically.
 
+### Added
+- `contrib/steam-bigpicture.sh`: watchdog launcher for Sunshine's "Steam Big Picture"
+  app. The Steam client intermittently ignores `steam://open/bigpicture` (a pre-existing
+  upstream flakiness, unrelated to Proteo — every server-side flow replication
+  succeeded, including simultaneous `close/bigpicture` + `proteo undo` and immediate
+  reconnect), and Sunshine fires the URL once, blind. The watchdog re-asserts it until
+  the Big Picture window exists on Xwayland (up to ~2 min, covering Steam cold start).
+
 ### Planned
 - Phase 4: opt-in HDR support on the virtual display.
 

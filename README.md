@@ -62,6 +62,22 @@ If `kwin` is unavailable in your build, `capture = portal` is the fallback.
 `encoder = vaapi` avoids Sunshine auto-picking the immature Vulkan encoder on AMD/RADV,
 which caused heavy stream latency.
 
+If you stream Steam Big Picture: the Steam client intermittently ignores
+`steam://open/bigpicture` (especially right after a `steam://close/bigpicture` and
+around display reconfigurations — i.e. at every reconnect), so Sunshine's stock
+one-shot launch can leave you staring at a bare desktop. `contrib/steam-bigpicture.sh`
+re-asserts the URL until the Big Picture window actually exists; point the app's
+detached command at it in `apps.json`:
+
+```json
+{
+  "name": "Steam Big Picture",
+  "detached": ["/home/YOU/.local/bin/steam-bigpicture.sh"],
+  "prep-cmd": [{"do": "", "undo": "setsid steam steam://close/bigpicture"}],
+  "image-path": "steam.png"
+}
+```
+
 Defaults live in `/etc/proteo/config.toml` (override per-user in
 `~/.config/proteo/config.toml`). While a stream is active your physical screens go
 dark by design (`physical_during_stream = "disable"`); they are restored when the
