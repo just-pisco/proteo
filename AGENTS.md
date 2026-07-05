@@ -55,9 +55,47 @@ Spike protocol:
 Record the outcome in `CHANGELOG.md` and in the "Spike results" section below.
 **Do not start Phase 1 without explicit user confirmation.**
 
-### Spike results
+### Spike results (2026-07-05) — **GATE PASSED → Road A confirmed**
 
-_Pending — spike not yet run._
+Environment as verified: Kubuntu 26.04, kernel 7.0.0-27-generic, Plasma/KWin Wayland,
+RX 6900 XT on DP-2 (5120x1440@120 at test time, HDR on). Secure Boot disabled, but the
+signed prebuilt module was used anyway (no DKMS needed).
+
+Exact reproduction steps:
+
+```sh
+sudo apt-get install -y linux-modules-evdi-generic libevdi1 libevdi-dev
+sudo modprobe evdi initial_device_count=1        # -> /dev/dri/card0 (evdi)
+cd spike
+python3 make_edid.py 1920 1080 60 -o edid-1920x1080-60.bin   # edid-decode: PASS
+gcc -Wall -O2 -o evdi_client evdi_client.c -levdi
+./evdi_client edid-1920x1080-60.bin               # keep running during the session
+```
+
+Findings, in decision order:
+
+1. **KWin adopts the output from outside, fully and automatically.** As soon as
+   `evdi_connect()` supplied the EDID, a `DVI-I-1` connector appeared and KWin
+   auto-enabled it at the EDID's preferred mode (1920x1080@59.93 CVT-RB), extending the
+   desktop at 4096,0. No kscreen-doctor `enable` was even needed. KWin immediately
+   modeset the device (client received `mode_changed 1920x1080@60`, ARGB8888).
+2. **Content proof, not just state:** the client's `evdi_request_update` +
+   `evdi_grab_pixels` returned 8,294,397/8,294,400 non-zero bytes once a window caused
+   damage on the virtual screen → KWin genuinely renders into it. Note: KWin only
+   presents frames on damage; a static, untouched screen can legitimately grab as black.
+3. **Priority is scriptable from outside:** `kscreen-doctor output.DVI-I-1.priority.1`
+   made the virtual output primary; reverting worked identically.
+4. **Teardown is clean:** SIGTERM → `evdi_disconnect()` → connector disappears; DP-2
+   came back exactly as snapshotted (enabled, priority 1, 5120x1440@120, HDR on).
+5. **The evdi client process must stay alive for the whole session** — the connector
+   exists only while a client holds the connection. The daemon therefore owns a
+   long-running child (or thread) per virtual display.
+6. Permissions: logind grants the seat user an rw ACL on evdi's `/dev/dri/cardX`
+   automatically — the daemon needs no root at runtime. Root is only needed once for
+   module install/load (`modprobe evdi initial_device_count=1`; make it persistent via
+   `/etc/modules-load.d/` + `/etc/modprobe.d/` in the .deb).
+7. No native KWin DBus API for virtual outputs exists (checked `org.kde.KWin` on this
+   Plasma version), so EVDI remains the right mechanism.
 
 ## Architecture (Road A)
 
