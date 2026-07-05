@@ -161,7 +161,12 @@ config). The kscreen-doctor sequence above remains the daemon-independent last r
 - Unit tests: `python3 -m pytest` (core only, no display server needed).
 - Run from checkout: `python3 -m proteo do|undo|status|rescue`.
 - Dev install: `python3 -m pip install --user --break-system-packages -e .`
-  → `~/.local/bin/proteo`. (.deb packaging lands in Phase 3.)
+  → `~/.local/bin/proteo` (remember: sunshine.conf and the guard unit must then point
+  at the same copy you're iterating on).
+- Release build: `dpkg-buildpackage -us -uc -b` → `../proteo_<ver>_all.deb`
+  (debhelper 13, pybuild from pyproject; debian/ + packaging/ hold everything).
+  The deb ships /usr/bin/proteo, the auto-enabled proteo-guard user unit,
+  /etc/proteo/config.toml and evdi modules-load.d/modprobe.d snippets.
 - The EVDI holder runs as transient systemd user unit `proteo-hold.service`
   (`systemctl --user status proteo-hold` for state, `journalctl --user -u proteo-hold`
   for logs). Session state lives in `$XDG_RUNTIME_DIR/proteo/session.json`.

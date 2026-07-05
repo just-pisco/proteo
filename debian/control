@@ -1,0 +1,32 @@
+Source: proteo
+Section: video
+Priority: optional
+Maintainer: Italo Piscopiello <piscopiello.italo@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               dh-python,
+               python3-all,
+               python3-setuptools,
+               pybuild-plugin-pyproject
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://github.com/piscopiello/proteo
+
+Package: proteo
+Architecture: all
+Depends: ${python3:Depends},
+         ${misc:Depends},
+         python3-gi,
+         libevdi1,
+         libkscreen-bin,
+         linux-modules-evdi-generic | evdi-dkms
+Recommends: edid-decode
+Description: client-matched virtual displays for Sunshine/Apollo on KDE Wayland
+ Proteo creates a virtual display at the exact resolution and refresh rate a
+ Moonlight client requests when a Sunshine/Apollo stream starts, makes it the
+ stream target, and restores the physical monitor configuration when the
+ stream ends — including automatically on host crash, holder death, suspend
+ and shutdown (proteo-guard failsafe daemon).
+ .
+ It hooks into the streaming host via the stable global_prep_cmd interface
+ and SUNSHINE_CLIENT_* environment variables: no fork, no patches. Targets
+ KDE Plasma 6 on Wayland (KWin output management) with EVDI virtual outputs.

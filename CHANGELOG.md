@@ -7,7 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Planned
+- Phase 4: opt-in HDR support on the virtual display.
+
+## [0.1.0] - 2026-07-05
+
 ### Added
+- Phase 3 — Debian packaging: `proteo_0.1.0_all.deb` (debhelper 13 + pybuild from
+  pyproject). Ships `/usr/bin/proteo`, the `proteo-guard` user unit (auto-enabled via
+  deb-systemd-helper), `/etc/proteo/config.toml` with documented defaults, and
+  modules-load.d/modprobe.d so evdi is ready at boot. Depends on
+  `linux-modules-evdi-generic | evdi-dkms`, `libevdi1`, `libkscreen-bin`, `python3-gi`.
+  MIT license.
 - Phase 2 — `proteo guard` failsafe daemon (`proteo-guard.service`, enabled): 1 s
   reconciliation polling with 2-poll debounce; auto-restores physical displays when the
   streaming host stops or the EVDI holder dies; login1 sleep delay-inhibitor with

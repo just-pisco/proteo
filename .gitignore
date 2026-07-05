@@ -1,2 +1,10 @@
 spike/evdi_client
 spike/*.bin
+debian/.debhelper/
+debian/proteo/
+debian/files
+debian/debhelper-build-stamp
+debian/*.substvars
+debian/*.debhelper.log
+.pybuild/
+*.egg-info/

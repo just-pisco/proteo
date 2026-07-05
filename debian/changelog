@@ -1,0 +1,8 @@
+proteo (0.1.0) resolute; urgency=medium
+
+  * Initial release: client-matched virtual displays for Sunshine/Apollo on
+    KDE Plasma Wayland + AMD. do/undo/status/rescue CLI, EVDI holder as
+    transient systemd user unit, proteo-guard failsafe daemon (host/holder
+    watch, sleep inhibitor), CVT-RB EDID generation.
+
+ -- Italo Piscopiello <piscopiello.italo@gmail.com>  Sun, 05 Jul 2026 17:00:00 +0200

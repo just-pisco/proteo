@@ -34,13 +34,36 @@ Proteo deliberately targets a niche that existing tools leave uncovered:
 
 If you're on Hyprland/wlroots or NVIDIA, other solutions may serve you better.
 
+## Install
+
+Build and install the .deb (Ubuntu 25.10+/26.04, KDE Plasma 6 Wayland):
+
+```sh
+sudo apt install debhelper dh-python python3-all python3-setuptools pybuild-plugin-pyproject
+dpkg-buildpackage -us -uc -b
+sudo apt install ../proteo_*_all.deb
+sudo modprobe evdi initial_device_count=1   # loaded automatically from next boot
+systemctl --user start proteo-guard.service # started automatically from next login
+```
+
+Hook it into Sunshine (`~/.config/sunshine/sunshine.conf`):
+
+```
+global_prep_cmd = [{"do":"/usr/bin/proteo do","undo":"/usr/bin/proteo undo","elevated":"false"}]
+```
+
+Defaults live in `/etc/proteo/config.toml` (override per-user in
+`~/.config/proteo/config.toml`). While a stream is active your physical screens go
+dark by design (`physical_during_stream = "disable"`); they are restored when the
+stream ends — or automatically by the `proteo-guard` failsafe if anything crashes or
+the machine suspends. Emergency restore, also over SSH: `proteo rescue`.
+
 ## Status
 
-⚠️ **Pre-alpha.** Phase 0 (feasibility gate) and Phase 1 (core + CLI) are done: `proteo
-do|undo|status|rescue` works end-to-end on KWin, and Sunshine is wired in via
-`global_prep_cmd`. Robustness hardening (crash/suspend failsafes) and .deb packaging are
-next. See `CHANGELOG.md` for progress and `AGENTS.md` for the full design.
+**0.1.0.** Working end-to-end: client-matched virtual display, exact restore,
+crash/suspend failsafes, .deb packaging. HDR is planned (opt-in) but not implemented.
+See `CHANGELOG.md` for details and `AGENTS.md` for the full design.
 
 ## License
 
-TBD.
+MIT.

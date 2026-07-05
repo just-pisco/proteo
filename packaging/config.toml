@@ -1,0 +1,37 @@
+# Proteo configuration — /etc/proteo/config.toml
+# Per-user overrides go in ~/.config/proteo/config.toml (same keys, they win).
+# Every key is optional; the values shown are the built-in defaults.
+
+# Physical output that `proteo rescue` re-enables when no session snapshot
+# exists, and the mode to force it to ("" = keep whatever mode it has).
+#rescue_output = "DP-2"
+#rescue_mode = ""            # e.g. "5120x1440@240"
+
+# What happens to physical outputs while a stream session is active:
+# "disable" = physical screens go dark, the virtual display is the only one
+# "keep"    = desktop extends onto the virtual display
+#physical_during_stream = "disable"
+
+# Clamps applied to client-requested modes. Widths/heights beyond 4095 are
+# not encodable in an EDID detailed timing descriptor.
+#max_width = 4095
+#max_height = 2304
+#min_width = 640
+#min_height = 480
+#default_width = 1920
+#default_height = 1080
+#default_fps = 60
+#max_fps = 240
+#min_fps = 24
+
+# HDR on the virtual display (Phase 4, experimental) — needs both this flag
+# and an HDR-requesting client.
+#hdr_enabled = false
+
+# Monitor name embedded in the virtual display's EDID.
+#virtual_name = "Proteo VD"
+
+# systemd user unit of the streaming host that proteo-guard watches.
+#host_unit = "app-dev.lizardbyte.app.Sunshine.service"
+#guard_poll_seconds = 1
+#guard_debounce = 2

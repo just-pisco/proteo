@@ -1,0 +1,4 @@
+packaging/systemd/proteo-guard.service usr/lib/systemd/user/
+packaging/modules-load.d/proteo.conf usr/lib/modules-load.d/
+packaging/modprobe.d/proteo.conf usr/lib/modprobe.d/
+packaging/config.toml etc/proteo/

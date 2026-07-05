@@ -4,3 +4,5 @@ Version: 0.1.0
 Summary: Client-matched virtual displays for Sunshine/Apollo on KDE Wayland + AMD
 License-Expression: MIT
 Requires-Python: >=3.11
+License-File: LICENSE
+Dynamic: license-file

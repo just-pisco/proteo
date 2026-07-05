@@ -1,3 +1,4 @@
+LICENSE
 README.md
 pyproject.toml
 proteo/__init__.py
@@ -11,15 +12,18 @@ proteo.egg-info/top_level.txt
 proteo/adapters/__init__.py
 proteo/adapters/evdi.py
 proteo/adapters/kscreen.py
+proteo/adapters/logind.py
 proteo/adapters/proc.py
 proteo/core/__init__.py
 proteo/core/config.py
 proteo/core/edid.py
+proteo/core/guard.py
 proteo/core/layout.py
 proteo/core/model.py
 proteo/core/state.py
 tests/test_config.py
 tests/test_edid.py
+tests/test_guard.py
 tests/test_layout.py
 tests/test_model.py
 tests/test_state.py
