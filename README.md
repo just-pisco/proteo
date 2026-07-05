@@ -51,6 +51,7 @@ Hook it into Sunshine (`~/.config/sunshine/sunshine.conf`):
 ```
 global_prep_cmd = [{"do":"/usr/bin/proteo do","undo":"/usr/bin/proteo undo","elevated":"false"}]
 capture = kwin
+encoder = vaapi
 ```
 
 `capture = kwin` is required: Sunshine's default KMS capture cannot read from the EVDI
@@ -58,6 +59,8 @@ virtual device (it has no render node), producing a frozen frame and an invisibl
 cursor. The KWin ScreenCast backend (`kwin`) captures compositor-rendered frames over
 PipeWire, cursor included; the needed KWin permission file ships with Sunshine's .deb.
 If `kwin` is unavailable in your build, `capture = portal` is the fallback.
+`encoder = vaapi` avoids Sunshine auto-picking the immature Vulkan encoder on AMD/RADV,
+which caused heavy stream latency.
 
 Defaults live in `/etc/proteo/config.toml` (override per-user in
 `~/.config/proteo/config.toml`). While a stream is active your physical screens go

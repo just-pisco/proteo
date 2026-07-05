@@ -19,6 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   kwingrab binds `zkde_screencast_unstable_v1` via Sunshine's shipped permission file
   and encoder validation passes (h264/hevc_vulkan on RADV). Documented in `README.md`
   and `AGENTS.md`.
+- Heavy stream latency with `capture = kwin`: Sunshine's encoder auto-probe selected
+  Vulkan video encode (h264_vulkan on RADV) instead of VAAPI. Fixed with
+  `encoder = vaapi` in `sunshine.conf` (h264/hevc_vaapi on radeonsi validated).
+- Verified via KWin scripting that Steam Big Picture lands fullscreen on the virtual
+  output in both flows (cold start ~45 s; warm reopen after Sunshine's
+  `steam://close/bigpicture` undo ~15 s) — "Steam never appears" reports were the
+  client disconnecting before Steam finished starting, compounded by the encoder lag.
+- Field validation of the guard: Sunshine hung at session teardown
+  (`Fatal: Hang detected!`) and crashed without running `proteo undo`; proteo-guard
+  detected the dead host and restored the physical displays automatically.
 
 ### Planned
 - Phase 4: opt-in HDR support on the virtual display.

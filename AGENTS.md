@@ -195,6 +195,11 @@ kwingrab finds the permission file, creates the PipeWire stream (DMA-BUF), and e
 validation passes (h264/hevc_vulkan on RADV). Valid `capture` values in this build:
 nvfbc, wlr, kwin, kms, x11, portal — `portal` is the fallback if kwingrab ever breaks.
 
+Also set `encoder = vaapi`: without it Sunshine's auto-probe picks the Vulkan encoder
+(h264_vulkan on RADV) before trying VAAPI, and Vulkan video encode on RADV showed heavy
+stream latency in real sessions. VAAPI (radeonsi) is the mature AMD path; validation
+finds h264_vaapi + hevc_vaapi (no AV1 — RDNA2 has no AV1 encoder).
+
 ## Way of working
 
 - Phased plan: 0 = spike (gate), 1 = core+adapter, 2 = robustness/failsafe,
