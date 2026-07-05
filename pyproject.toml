@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "proteo"
+version = "0.1.0"
+description = "Client-matched virtual displays for Sunshine/Apollo on KDE Wayland + AMD"
+requires-python = ">=3.11"
+license = "MIT"
+
+[project.scripts]
+proteo = "proteo.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["proteo*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
