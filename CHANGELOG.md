@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Phase 1 — `proteo` Python package: headless `core/` (CVT-RB EDID generation with DTD
+  pixel-clock ceiling handling, `SUNSHINE_CLIENT_*` parsing with clamping, TOML config,
+  kscreen layout planning, atomic session state) plus `adapters/` (kscreen-doctor JSON,
+  libevdi via ctypes, hold process as transient systemd user unit) and the
+  `proteo do|undo|status|rescue` CLI. 31 core unit tests.
+- Phase 1 E2E verified live on KWin: do (3120x1440@120), idempotent double-do, reshape
+  (1280x800@60), undo with exact DP-2 restore, full disable-physical cycle, and rescue
+  after simulated state loss.
 - Project scaffolding: `AGENTS.md` (single source of truth), `CLAUDE.md`/`GEMINI.md`
   pointers, this changelog, public `README.md`.
 - Phase-0 spike tools: `spike/make_edid.py` (parametric CVT-RB EDID generator,

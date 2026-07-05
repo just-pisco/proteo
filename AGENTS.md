@@ -144,7 +144,17 @@ Once Phase 2 lands, `proteo rescue` wraps all of this in one command.
 
 ## Build / test / install
 
-_To be filled in Phase 1 (core+adapter) and Phase 3 (.deb packaging)._
+- Runtime deps: Python ≥3.11 (stdlib only), `libevdi1` + evdi kernel module
+  (`linux-modules-evdi-generic` on Ubuntu), `kscreen-doctor`, systemd user session.
+- Unit tests: `python3 -m pytest` (core only, no display server needed).
+- Run from checkout: `python3 -m proteo do|undo|status|rescue`.
+- Dev install: `python3 -m pip install --user --break-system-packages -e .`
+  → `~/.local/bin/proteo`. (.deb packaging lands in Phase 3.)
+- The EVDI holder runs as transient systemd user unit `proteo-hold.service`
+  (`systemctl --user status proteo-hold` for state, `journalctl --user -u proteo-hold`
+  for logs). Session state lives in `$XDG_RUNTIME_DIR/proteo/session.json`.
+- Config: `/etc/proteo/config.toml` overridden by `~/.config/proteo/config.toml`;
+  defaults in `proteo/core/config.py` (notably `physical_during_stream = "disable"`).
 
 ## Way of working
 
