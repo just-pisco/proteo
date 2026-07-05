@@ -10,12 +10,13 @@ from __future__ import annotations
 
 import argparse
 import os
+import subprocess
 import sys
 from dataclasses import asdict
 
 from . import __version__
 from .adapters import evdi, kscreen, proc
-from .core import layout, state
+from .core import guard, layout, state
 from .core.config import load_config
 from .core.edid import make_edid
 from .core.model import request_from_env
@@ -147,6 +148,81 @@ def cmd_status(args) -> int:
     return 0
 
 
+def cmd_guard(args) -> int:
+    """Failsafe daemon: restores physical displays when the session is
+    orphaned (host crashed, holder died) or the machine is about to sleep."""
+    # GLib/Gio only here: the plain CLI must not depend on a main loop
+    from gi.repository import GLib
+
+    from .adapters import logind
+
+    cfg = load_config()
+    spath = state.state_path()
+    debouncer = guard.Debouncer(cfg.guard_debounce)
+
+    def observe() -> guard.Observation:
+        return guard.Observation(
+            session=state.load(spath) is not None,
+            hold_active=proc.hold_active(),
+            host_active=proc.unit_active(cfg.host_unit))
+
+    def restore(reason: str) -> None:
+        _say(f"guard: restoring physical displays — {reason}")
+        res = subprocess.run([sys.executable, "-m", "proteo", "undo"],
+                             capture_output=True, text=True)
+        for line in (res.stdout + res.stderr).splitlines():
+            print(f"  {line}", flush=True)
+        if res.returncode != 0:
+            _say("guard: undo failed, attempting rescue")
+            subprocess.run([sys.executable, "-m", "proteo", "rescue"])
+
+    def tick() -> bool:
+        reason = guard.decide(observe())
+        if debouncer.update(reason is not None):
+            restore(reason or "invariant violated")
+        return True  # keep the timer
+
+    inhibitor = {"fd": -1}
+
+    def arm_inhibitor(bus) -> None:
+        if inhibitor["fd"] < 0:
+            inhibitor["fd"] = logind.take_sleep_inhibitor(
+                bus, "restoring physical displays before sleep")
+
+    def on_sleep(bus, going_to_sleep: bool) -> None:
+        if going_to_sleep:
+            if state.load(spath) is not None:
+                restore("system is suspending")
+            if inhibitor["fd"] >= 0:       # release: let the system sleep
+                os.close(inhibitor["fd"])
+                inhibitor["fd"] = -1
+        else:
+            arm_inhibitor(bus)             # re-arm after resume
+
+    try:
+        bus = logind.system_bus()
+        arm_inhibitor(bus)
+        logind.on_prepare_for_sleep(bus, lambda going: on_sleep(bus, going))
+        _say("guard: sleep inhibitor armed")
+    except Exception as e:  # noqa: BLE001 — keep guarding even without logind
+        _say(f"guard: WARNING: no sleep integration ({e}); polling only")
+
+    loop = GLib.MainLoop()
+    GLib.timeout_add(cfg.guard_poll_seconds * 1000, tick)
+    for sig in (2, 15):  # SIGINT, SIGTERM
+        GLib.unix_signal_add(GLib.PRIORITY_HIGH, sig, lambda *_: loop.quit())
+    _say(f"guard: watching {cfg.host_unit} and {proc.UNIT} "
+         f"every {cfg.guard_poll_seconds}s")
+    loop.run()
+
+    # on shutdown of the guard itself: restore immediately if orphaned
+    reason = guard.decide(observe())
+    if reason:
+        restore(reason)
+    _say("guard: stopped")
+    return 0
+
+
 def cmd_hold(args) -> int:
     with open(args.edid, "rb") as f:
         edid = f.read()
@@ -164,12 +240,13 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("undo", help="tear down and restore physical displays")
     sub.add_parser("status", help="show session and output state")
     sub.add_parser("rescue", help="force-restore physical displays (emergency)")
+    sub.add_parser("guard", help="failsafe daemon (run via proteo-guard.service)")
     hold = sub.add_parser("_hold")  # internal: EVDI connection holder
     hold.add_argument("--edid", required=True)
 
     args = p.parse_args(argv)
     handler = {"do": cmd_do, "undo": cmd_undo, "status": cmd_status,
-               "rescue": cmd_rescue, "_hold": cmd_hold}[args.cmd]
+               "rescue": cmd_rescue, "guard": cmd_guard, "_hold": cmd_hold}[args.cmd]
     try:
         return handler(args)
     except Exception as e:  # noqa: BLE001 — prep_cmd needs a clean exit code

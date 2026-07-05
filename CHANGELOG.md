@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Phase 2 — `proteo guard` failsafe daemon (`proteo-guard.service`, enabled): 1 s
+  reconciliation polling with 2-poll debounce; auto-restores physical displays when the
+  streaming host stops or the EVDI holder dies; login1 sleep delay-inhibitor with
+  teardown on PrepareForSleep and re-arm on resume; orphan check on guard shutdown.
+  Live-tested: holder SIGKILL, host stop mid-session, reshape false-positive immunity.
+  Suspend/resume cycle still needs a manual test.
 - Phase 1 — `proteo` Python package: headless `core/` (CVT-RB EDID generation with DTD
   pixel-clock ceiling handling, `SUNSHINE_CLIENT_*` parsing with clamping, TOML config,
   kscreen layout planning, atomic session state) plus `adapters/` (kscreen-doctor JSON,

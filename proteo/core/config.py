@@ -33,6 +33,10 @@ class Config:
     # HDR stays off until Phase 4; opt-in only
     hdr_enabled: bool = False
     virtual_name: str = "Proteo VD"  # monitor name embedded in the EDID
+    # systemd user unit of the streaming host the guard watches
+    host_unit: str = "app-dev.lizardbyte.app.Sunshine.service"
+    guard_poll_seconds: int = 1
+    guard_debounce: int = 2          # consecutive bad polls before restoring
     extra: dict = field(default_factory=dict, compare=False)
 
 

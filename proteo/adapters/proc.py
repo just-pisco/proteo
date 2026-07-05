@@ -34,8 +34,12 @@ def start_hold(edid_path: Path) -> int:
     return hold_pid()
 
 
+def unit_active(unit: str) -> bool:
+    return _run(["systemctl", "--user", "is-active", "--quiet", unit]).returncode == 0
+
+
 def hold_active() -> bool:
-    return _run(["systemctl", "--user", "is-active", "--quiet", UNIT]).returncode == 0
+    return unit_active(UNIT)
 
 
 def hold_pid() -> int:

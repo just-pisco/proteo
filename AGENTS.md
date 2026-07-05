@@ -116,15 +116,25 @@ Findings, in decision order:
 
 ## Robustness requirements (this is 70% of the project's value)
 
-- Watch the Sunshine/Apollo systemd user service via DBus: if it goes
-  `inactive`/`failed`, restore physical monitors automatically, no manual intervention.
-- Sleep inhibitor (`org.freedesktop.login1`): on suspend tear down the virtual output, on
-  resume restore — never leave the session stuck on a dead virtual display.
-- Teardown also on SIGTERM/shutdown; persist session state to disk for post-crash
-  recovery.
+Implemented in Phase 2 by `proteo guard` (systemd user unit `proteo-guard.service`,
+polling reconciliation at `guard_poll_seconds` with a `guard_debounce`-poll debounce so
+reshape windows don't misfire; restore = `proteo undo` subprocess, `rescue` fallback):
+
+- Host watch: if the Sunshine/Apollo unit (`host_unit` in config) stops/crashes while a
+  session is active, physical monitors are restored automatically (live-tested).
+  Known limitation: a crash + auto-restart faster than ~2 s could slip past the poll —
+  Sunshine ships RestartSec=5s, so this is theoretical on the target stack.
+- Holder watch: if `proteo-hold.service` dies (SIGKILL live-tested), restore fires
+  within ~debounce+1 seconds — the black-screen scenario self-heals.
+- Sleep: delay inhibitor on `org.freedesktop.login1` (visible in
+  `systemd-inhibit --list`); PrepareForSleep(true) → teardown before suspend, inhibitor
+  re-armed on resume. Suspend/resume needs a manual test pass.
+- Guard SIGTERM/shutdown: a final orphan check restores before exiting. Session state
+  persists in `$XDG_RUNTIME_DIR/proteo/session.json` (tmpfs — reboot resets displays
+  anyway); `do` after a crash reuses the stale snapshot for a truthful restore.
 - HDR is OUT of scope until everything else is solid; then opt-in via config only
   (notoriously unstable on virtual displays).
-- No hard-coding: physical resolution, output name, user — all from config.
+- No hard-coding: physical output, host unit, limits, cadence — all from config.
 
 ## Emergency escape hatch
 
@@ -140,7 +150,9 @@ kscreen-doctor output.<VIRTUAL_NAME>.disable
 sudo modprobe -r evdi
 ```
 
-Once Phase 2 lands, `proteo rescue` wraps all of this in one command.
+`proteo rescue` wraps all of this in one command (works over SSH; stops the hold unit,
+restores from the snapshot if present, falls back to `rescue_output`/`rescue_mode` from
+config). The kscreen-doctor sequence above remains the daemon-independent last resort.
 
 ## Build / test / install
 

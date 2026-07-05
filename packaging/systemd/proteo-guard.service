@@ -1,0 +1,21 @@
+# Proteo guard — systemd user unit.
+# Restores physical displays automatically when a streaming session is
+# orphaned (host crash, holder death) or the machine suspends.
+#
+# Packaged install (.deb, Phase 3): /usr/lib/systemd/user/ with
+# ExecStart=/usr/bin/proteo guard. For a dev checkout, copy to
+# ~/.config/systemd/user/ and adjust ExecStart to %h/.local/bin/proteo.
+
+[Unit]
+Description=Proteo guard (virtual display failsafe)
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/proteo guard
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target
