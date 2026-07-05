@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Phase 1 E2E verified live on KWin: do (3120x1440@120), idempotent double-do, reshape
   (1280x800@60), undo with exact DP-2 restore, full disable-physical cycle, and rescue
   after simulated state loss.
+- Host integration: Sunshine v2026.516 (official Ubuntu 26.04 .deb) installed as the
+  systemd user service `app-dev.lizardbyte.app.Sunshine.service`, with proteo hooked
+  into `global_prep_cmd`; verified proteo runs correctly from a systemd service
+  environment. Awaiting first real Moonlight session test.
 - Project scaffolding: `AGENTS.md` (single source of truth), `CLAUDE.md`/`GEMINI.md`
   pointers, this changelog, public `README.md`.
 - Phase-0 spike tools: `spike/make_edid.py` (parametric CVT-RB EDID generator,

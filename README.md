@@ -36,9 +36,10 @@ If you're on Hyprland/wlroots or NVIDIA, other solutions may serve you better.
 
 ## Status
 
-⚠️ **Pre-alpha.** Currently in Phase 0: validating that KWin adopts externally-created
-virtual outputs on this stack. See `CHANGELOG.md` for progress and `AGENTS.md` for the
-full design.
+⚠️ **Pre-alpha.** Phase 0 (feasibility gate) and Phase 1 (core + CLI) are done: `proteo
+do|undo|status|rescue` works end-to-end on KWin, and Sunshine is wired in via
+`global_prep_cmd`. Robustness hardening (crash/suspend failsafes) and .deb packaging are
+next. See `CHANGELOG.md` for progress and `AGENTS.md` for the full design.
 
 ## License
 
