@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Planned
+- Phase 4: opt-in HDR support on the virtual display.
+
+## [0.1.1] - 2026-07-06
+
 ### Fixed
+- **Multi-second stream lag**: the EVDI holder held the connector but never
+  consumed frames, so KWin's page flips on the virtual output never completed
+  promptly — compositing fell behind and every KWin-ScreenCast frame Sunshine
+  captured arrived late (fluid metadata cursor, hugely delayed UI reactions:
+  the reported "click lag"). The holder now registers a framebuffer and drains
+  updates (`evdi_request_update`/`evdi_grab_pixels`, the Phase-0 spike client's
+  behavior — a protocol obligation, not an optimization). Measured ~58 fps
+  drained on a 60 Hz 2340x1080 mode under animation, ~11% of one CPU core.
+- Steam Big Picture opening *behind* the desktop (start sound audible, desktop
+  shown): KWin focus-stealing prevention keeps windows spawned by background
+  processes below; `contrib/steam-bigpicture.sh` now force-activates the Big
+  Picture window via KWin scripting once it appears.
 - First real Moonlight session showed a frozen desktop with an invisible cursor while
   audio proved the app was running. Diagnosis: Proteo/KWin were fine (a screenshot
   confirmed Steam Big Picture rendering full-screen on the virtual output); the fault
@@ -37,9 +54,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   succeeded, including simultaneous `close/bigpicture` + `proteo undo` and immediate
   reconnect), and Sunshine fires the URL once, blind. The watchdog re-asserts it until
   the Big Picture window exists on Xwayland (up to ~2 min, covering Steam cold start).
-
-### Planned
-- Phase 4: opt-in HDR support on the virtual display.
 
 ## [0.1.0] - 2026-07-05
 

@@ -19,11 +19,33 @@ bp_window_present() {
     xwininfo -root -tree 2>/dev/null | grep -qi 'big picture'
 }
 
+# KWin focus-stealing prevention keeps windows spawned by background processes
+# (like this one) below the stack — the stream would show the desktop while Big
+# Picture plays its intro sound underneath. Force-activate it via KWin scripting.
+raise_bp() {
+    local q js n
+    q=$(command -v qdbus6 || command -v qdbus) || return 0
+    js=$(mktemp --suffix=.js)
+    cat > "$js" <<'EOF'
+for (const w of workspace.stackingOrder) {
+    if ((w.caption || "").toLowerCase().indexOf("big picture") !== -1) {
+        workspace.activeWindow = w;
+    }
+}
+EOF
+    n=$($q org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript "$js") &&
+        $q org.kde.KWin /Scripting/Script"$n" org.kde.kwin.Script.run >/dev/null 2>&1
+    [ -n "$n" ] && $q org.kde.KWin /Scripting/Script"$n" org.kde.kwin.Script.stop >/dev/null 2>&1
+    rm -f "$js"
+}
+
 for attempt in 1 2 3 4 5 6; do
     setsid steam steam://open/bigpicture >/dev/null 2>&1 &
     for _ in 1 2 3 4 5 6 7 8 9 10; do
         sleep 2
         if bp_window_present; then
+            sleep 1
+            raise_bp
             exit 0
         fi
     done

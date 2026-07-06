@@ -1,3 +1,15 @@
+proteo (0.1.1) resolute; urgency=medium
+
+  * Fix multi-second stream lag: the EVDI holder now consumes frames
+    (register buffer + request_update + grab_pixels). A non-draining client
+    left KWin's flips on the virtual output uncompleted, delaying every
+    composited/screencast frame. Verified ~58 fps drained on a 60 Hz mode.
+  * contrib/steam-bigpicture.sh: watchdog launcher for Sunshine's Steam Big
+    Picture app — retries steam://open/bigpicture until the window exists,
+    then raises it past KWin focus-stealing prevention.
+
+ -- Italo Piscopiello <piscopiello.italo@gmail.com>  Mon, 06 Jul 2026 09:30:00 +0200
+
 proteo (0.1.0) resolute; urgency=medium
 
   * Initial release: client-matched virtual displays for Sunshine/Apollo on
