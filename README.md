@@ -1,5 +1,9 @@
 # Proteo
 
+[![Release](https://img.shields.io/github/v/release/just-pisco/proteo)](https://github.com/just-pisco/proteo/releases/latest)
+[![License: MIT](https://img.shields.io/github/license/just-pisco/proteo)](LICENSE)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-buy%20me%20a%20coffee-ff5f5f?logo=ko-fi&logoColor=white)](https://ko-fi.com/italopiscopiello)
+
 **Client-matched virtual displays for Sunshine/Apollo game streaming on KDE Plasma
 Wayland + AMD.**
 
