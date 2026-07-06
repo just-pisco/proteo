@@ -92,6 +92,11 @@ display is currently impossible upstream — the evdi kernel module lacks the DR
 HDR connector properties KWin requires (details in `AGENTS.md`). See `CHANGELOG.md`
 for history.
 
+## Support
+
+If Proteo saved you an evening of resolution juggling, you can
+[buy me a coffee on Ko-fi](https://ko-fi.com/italopiscopiello). ☕
+
 ## License
 
 MIT.
