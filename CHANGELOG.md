@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned
-- Phase 4: opt-in HDR support on the virtual display.
+### Changed
+- Phase 4 (HDR) feasibility probe: **blocked upstream**. The evdi kernel module
+  (1.14.15) does not expose the `Colorspace`/`HDR_OUTPUT_METADATA` DRM connector
+  properties, so KWin cannot drive the virtual output in HDR no matter what EDID it
+  gets (`kscreen-doctor -j`: no `hdr` key on DVI-I-1; DP-2 has `hdr: true`).
+  Documented in `AGENTS.md`; `hdr_enabled` stays as a reserved opt-in. The unlock is
+  an upstream evdi patch, tracked as a possible future contribution.
 
 ## [0.1.1] - 2026-07-06
 

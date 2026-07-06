@@ -86,9 +86,11 @@ the machine suspends. Emergency restore, also over SSH: `proteo rescue`.
 
 ## Status
 
-**0.1.0.** Working end-to-end: client-matched virtual display, exact restore,
-crash/suspend failsafes, .deb packaging. HDR is planned (opt-in) but not implemented.
-See `CHANGELOG.md` for details and `AGENTS.md` for the full design.
+**0.1.1.** Working end-to-end in real Moonlight sessions: client-matched virtual
+display, exact restore, crash/suspend failsafes, .deb packaging. HDR on the virtual
+display is currently impossible upstream — the evdi kernel module lacks the DRM
+HDR connector properties KWin requires (details in `AGENTS.md`). See `CHANGELOG.md`
+for history.
 
 ## License
 

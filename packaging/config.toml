@@ -24,8 +24,11 @@
 #max_fps = 240
 #min_fps = 24
 
-# HDR on the virtual display (Phase 4, experimental) — needs both this flag
-# and an HDR-requesting client.
+# HDR on the virtual display — currently IMPOSSIBLE on the evdi kernel module:
+# its DRM connector lacks the Colorspace and HDR_OUTPUT_METADATA properties, so
+# KWin never offers HDR on the virtual output (verified 2026-07-06, evdi 1.14.15;
+# see AGENTS.md "Phase 4"). The flag is reserved for a future evdi that supports
+# them; until then it has no effect beyond being ANDed with the client request.
 #hdr_enabled = false
 
 # Monitor name embedded in the virtual display's EDID.

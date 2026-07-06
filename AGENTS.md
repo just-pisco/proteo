@@ -200,6 +200,27 @@ Also set `encoder = vaapi`: without it Sunshine's auto-probe picks the Vulkan en
 stream latency in real sessions. VAAPI (radeonsi) is the mature AMD path; validation
 finds h264_vaapi + hevc_vaapi (no AV1 — RDNA2 has no AV1 encoder).
 
+## Phase 4 HDR — feasibility probe (2026-07-06): GATE FAILED upstream
+
+True HDR on the virtual display is **not possible on the current stack**, regardless
+of anything Proteo could do. Evidence, gathered live with a session up:
+
+- `drm_info`: every amdgpu connector exposes the `Colorspace` enum and
+  `HDR_OUTPUT_METADATA` blob DRM properties (DP-2 showed `BT2020_RGB` + blob while
+  HDR was active). The **evdi connector exposes neither** (evdi 1.14.15, kernel
+  7.0.0-27).
+- KWin requires those properties to drive an output in HDR (it must send PQ metadata
+  to the sink): `kscreen-doctor -j` shows `"hdr": true` for DP-2 and **no `hdr` key
+  at all** for the virtual DVI-I-1. No EDID (e.g. a CTA-861 extension with HDR static
+  metadata + BT.2020 colorimetry) can compensate for the missing driver properties.
+
+The durable unlock is an upstream contribution to DisplayLink's evdi module: attach
+`drm_connector_attach_hdr_output_metadata_property` + Colorspace, plumb the metadata
+blob to the client API. Only then: HDR EDID generation in `core/edid.py`, KWin
+screencast in PQ, and Sunshine `hevc_vaapi` main10 close the pipeline. `hdr_enabled`
+stays in the config as a reserved opt-in (it is ANDed with the client request in
+`core/model.py` and currently changes nothing else).
+
 ## Way of working
 
 - Phased plan: 0 = spike (gate), 1 = core+adapter, 2 = robustness/failsafe,
