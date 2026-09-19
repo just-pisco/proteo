@@ -30,6 +30,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     and every swap is preceded by a rotating backup (`profile_backups_kept`).
   - `proteo profiles list|show|promote|forget` to inspect and correct what was
     learned; `profiles_enabled = false` turns the whole thing off.
+  - **No per-game setup**: `proteo profiles hook` writes the wrapper into
+    Steam's launch options for every installed game, and `proteo-guard`
+    re-applies it to newly installed games whenever Steam has been closed for
+    `profile_hook_delay_seconds`. Steam rewrites `localconfig.vdf` as it exits,
+    so the hook refuses to run while Steam is up rather than making an edit
+    that would be silently reverted.
+  - `core/steamvdf.py` is a KeyValues reader/writer that round-trips a real
+    `localconfig.vdf` byte for byte, so editing one leaf leaves the other
+    thousands of keys untouched. The wrapper is inserted immediately before
+    `%command%`, never at the front, so an existing
+    `WINEDLLOVERRIDES=... %command%` keeps working. A rotating backup of the
+    file is taken before every write, and proteo never deletes a key from it.
   - The wrapper never blocks a launch: any failure in profile handling is
     reported and the game starts unchanged, with the child's exit code and
     termination signals forwarded through.

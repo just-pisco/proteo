@@ -155,10 +155,32 @@ Design decisions, and why:
   the session deactivates, the game runs unchanged, and the child's exit code and
   termination signals are forwarded so Steam's Stop button still works.
 
+- **The hook installs itself.** Asking the user to paste launch options into every
+  game is the chore the feature was meant to remove, so `proteo profiles hook` writes
+  them for every installed game and the guard re-applies them to newly installed ones.
+  A Steam *compatibility tool* would have been the tidier hook — one global checkbox —
+  but it would collide with a user-chosen Proton build (GE-Proton on the dev machine),
+  so launch options it is. Steam holds `localconfig.vdf` in memory and rewrites it on
+  exit: editing it under a live client is silently reverted minutes later, which looks
+  like success, so the hook refuses to run while Steam is up and the guard waits out
+  `profile_hook_delay_seconds` after Steam disappears (`SteamQuietWatcher`, firing once
+  per Steam session so it cannot loop).
+- **The VDF writer is held to a round-trip standard.** `core/steamvdf.py` parses
+  KeyValues into ordered `(key, value)` pairs — dicts lose both duplicate keys and
+  order — and re-serialises the real 87 KB `localconfig.vdf` byte for byte. That is
+  the property that makes editing one leaf among thousands safe. The wrapper goes
+  immediately *before* `%command%`, never at the front, or an existing
+  `WINEDLLOVERRIDES=... %command%` would become an argument to proteo instead of an
+  environment variable for the game. Backup before every write; keys are never
+  deleted, so unhooking leaves `LaunchOptions ""` — exactly what Steam writes when the
+  field is cleared in its UI.
+
 Layout: `core/profiles.py` (pure: key, classification, manifest, promotion evidence),
-`adapters/gamefiles.py` (scope discovery, scanning, copying, backups — filesystem only,
-so it is tested too, unlike the display adapters). Store lives under `XDG_DATA_HOME`,
-not `XDG_RUNTIME_DIR`: unlike session state, profiles must survive reboots.
+`core/steamvdf.py` (pure: KeyValues, launch-option rule), `adapters/gamefiles.py` and
+`adapters/steamconfig.py` (scope discovery, scanning, copying, backups, Steam config —
+filesystem only, so both are tested, unlike the display adapters). Store lives under
+`XDG_DATA_HOME`, not `XDG_RUNTIME_DIR`: unlike session state, profiles must survive
+reboots.
 
 ## Robustness requirements (this is 70% of the project's value)
 

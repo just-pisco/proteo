@@ -51,6 +51,11 @@ class Config:
         "crash", "telemetry", "backup", "tmp", "temp")
     profile_max_bytes: int = 512 * 1024
     profile_backups_kept: int = 5
+    # keep Steam's per-game launch options hooked automatically: the guard
+    # re-applies them to newly installed games whenever Steam has been closed
+    # for profile_hook_delay_seconds (Steam rewrites that file as it exits)
+    profile_hook_auto: bool = True
+    profile_hook_delay_seconds: int = 20
     # directories scanned for a native (non-Proton) game, relative to $HOME
     profile_native_roots: tuple[str, ...] = (".config", ".local/share")
     extra: dict = field(default_factory=dict, compare=False)

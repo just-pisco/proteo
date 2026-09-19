@@ -46,3 +46,34 @@ class Debouncer:
     def update(self, positive: bool) -> bool:
         self._streak = self._streak + 1 if positive else 0
         return self._streak >= self.threshold
+
+
+class SteamQuietWatcher:
+    """Fires once each time Steam has been closed for `delay` seconds.
+
+    Launch options live in a file Steam keeps in memory and rewrites on exit,
+    so they can only be edited while it is closed — and not immediately, since
+    that exit write lands a moment after the process disappears. Waiting out a
+    delay and then firing exactly once per Steam session keeps the guard from
+    rewriting the file in a loop.
+    """
+
+    def __init__(self, delay: float):
+        if delay < 0:
+            raise ValueError("delay must be >= 0")
+        self.delay = delay
+        self._closed_at: float | None = None
+        self._fired = False
+
+    def update(self, steam_running: bool, now: float) -> bool:
+        if steam_running:
+            # a fresh Steam session re-arms us: it may have installed new games
+            self._closed_at = None
+            self._fired = False
+            return False
+        if self._closed_at is None:
+            self._closed_at = now
+        if self._fired or now - self._closed_at < self.delay:
+            return False
+        self._fired = True
+        return True

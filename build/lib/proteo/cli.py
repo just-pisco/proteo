@@ -1,4 +1,4 @@
-"""proteo CLI — do / undo / status / rescue (+ hidden _hold).
+"""proteo CLI — do / undo / status / rescue / profile / profiles (+ hidden _hold).
 
 do/undo contract (AGENTS.md): `do` reads SUNSHINE_CLIENT_*, brings up the
 virtual output at that format and makes it the stream target; `undo` tears it
@@ -10,14 +10,17 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
+import signal
 import subprocess
 import sys
+import time
 from dataclasses import asdict
 
 from . import __version__
-from .adapters import evdi, kscreen, proc
-from .core import guard, layout, state
-from .core.config import load_config
+from .adapters import evdi, gamefiles, kscreen, proc
+from .core import guard, layout, profiles, state
+from .core.config import Config, load_config
 from .core.edid import make_edid
 from .core.model import request_from_env
 
@@ -229,6 +232,209 @@ def cmd_hold(args) -> int:
     return evdi.hold(edid)
 
 
+class _ProfileSession:
+    """Swaps a game's settings to match the current display, then learns from
+    what the game wrote on the way out.
+
+    Every method is failure-tolerant on purpose: this code sits between Steam
+    and the game's executable, so a bug here must cost a profile, never a
+    launch. Anything unexpected disables the session and the game still runs.
+    """
+
+    def __init__(self, cfg: Config, env: dict[str, str], command: list[str],
+                 verbose: bool):
+        self.cfg = cfg
+        self.env = env
+        self.command = command
+        self.verbose = verbose
+        self.active = False
+        self.app = ""
+        self.key = ""
+        self.scope: list = []
+        self.manifest: profiles.Manifest | None = None
+        self.before: dict = {}
+
+    def begin(self) -> None:
+        if not self.cfg.profiles_enabled:
+            return
+        self.app = gamefiles.app_id(self.env) or ""
+        if not self.app:
+            _say("profile: no Steam app id in the environment; passing through")
+            return
+        self.scope = gamefiles.roots(
+            self.env, self.cfg, gamefiles.name_hints(self.env, self.command))
+        if not self.scope:
+            _say(f"profile: no config scope found for app {self.app}; passing through")
+            return
+        self.key = profiles.display_key(kscreen.snapshot())
+        self.manifest = (profiles.manifest_load(
+            profiles.manifest_path(self.app, self.env))
+            or profiles.Manifest(app_id=self.app))
+        if not self.manifest.name:
+            self.manifest.name = self._guess_name()
+        self.manifest.roots = [r.label for r in self.scope]
+        self.active = True
+        self._install()
+        self.before = gamefiles.scan(self.scope, self.cfg)
+
+    def _guess_name(self) -> str:
+        install = (self.env.get("STEAM_COMPAT_INSTALL_PATH") or "").strip()
+        return os.path.basename(install.rstrip("/")) if install else ""
+
+    def _install(self) -> None:
+        """Bring in the profile stored for this display shape, if we have one.
+
+        When there is none, the game keeps whatever it last wrote and configures
+        itself for the new screen — which is precisely the state we want to
+        capture on the way out as this shape's first profile.
+        """
+        assert self.manifest is not None
+        source = profiles.key_dir(self.app, self.key, self.env)
+        stored = set(gamefiles.stored_keys(source))
+        swappable = [f for f in self.manifest.files if f in stored]
+        if not swappable:
+            _say(f"profile: nothing to restore for {self.key} yet — "
+                 f"observing this launch")
+            return
+        self._backup(swappable)
+        restored = gamefiles.copy_in(swappable, self.scope, source)
+        _say(f"profile: restored {len(restored)} file(s) for {self.key}")
+
+    def _backup(self, keys: list[str]) -> None:
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        dest = profiles.backup_dir(self.app, stamp, self.env)
+        gamefiles.copy_out(keys, self.scope, dest)
+        gamefiles.prune_backups(self.app, self.cfg.profile_backups_kept, self.env)
+
+    def finish(self) -> None:
+        """Learn what the game changed, then store it as this shape's profile."""
+        if not self.active or self.manifest is None:
+            return
+        after = gamefiles.scan(self.scope, self.cfg)
+        changed = profiles.changed_paths(self.before, after)
+        observed, ignored = profiles.classify(changed, self.cfg)
+        if self.verbose and ignored:
+            _say(f"profile: ignored {len(ignored)} changed file(s) "
+                 f"(not configuration, or excluded)")
+        self.manifest.learn(observed, ignored)
+
+        # store this shape's copy of everything watched, then let the evidence
+        # across shapes decide what is actually display-dependent
+        saved = gamefiles.copy_out(self.manifest.watched, self.scope,
+                                   profiles.key_dir(self.app, self.key, self.env))
+        digests = gamefiles.digests_by_display_key(self.app, self.env)
+        promoted = self.manifest.promote(
+            profiles.discriminating(digests) & set(self.manifest.watched))
+        profiles.manifest_save(self.manifest,
+                               profiles.manifest_path(self.app, self.env))
+
+        _say(f"profile: saved {len(saved)} file(s) for {self.key}; "
+             f"{len(self.manifest.files)} swapped, "
+             f"{len(self.manifest.candidates)} still observed"
+             + (f" (+{len(promoted)} newly swapped)" if promoted else ""))
+
+
+def _run_child(command: list[str]) -> int:
+    """Run the game, forwarding termination signals so Steam's Stop button
+    still reaches it through this wrapper."""
+    child = subprocess.Popen(command)
+    previous = {}
+
+    def forward(signum, _frame):
+        child.send_signal(signum)
+
+    for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+        previous[sig] = signal.signal(sig, forward)
+    try:
+        code = child.wait()
+    finally:
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
+    # a child killed by signal reports a negative code; Steam wants a real one
+    return code if code >= 0 else 128 - code
+
+
+def cmd_profile(args) -> int:
+    """Launch wrapper for Steam launch options: `proteo profile -- %command%`."""
+    command = list(args.command)
+    if command and command[0] == "--":
+        command.pop(0)
+    if not command:
+        _say("ERROR: nothing to launch — use: proteo profile -- %command%")
+        return 2
+
+    cfg = load_config()
+    env = dict(os.environ)
+    session = _ProfileSession(cfg, env, command, args.verbose)
+    try:
+        session.begin()
+    except Exception as e:  # noqa: BLE001 — a profile is never worth a failed launch
+        _say(f"profile: WARNING: setup failed ({e}); launching unchanged")
+        session.active = False
+
+    try:
+        return _run_child(command)
+    finally:
+        try:
+            session.finish()
+        except Exception as e:  # noqa: BLE001 — the game already exited; just report
+            _say(f"profile: WARNING: could not save profile ({e})")
+
+
+def cmd_profiles(args) -> int:
+    env = dict(os.environ)
+    if args.action == "list":
+        root = profiles.store_dir(env)
+        games = sorted(d for d in root.iterdir() if d.is_dir()) \
+            if root.is_dir() else []
+        if not games:
+            _say("no game profiles learned yet")
+            return 0
+        for game in games:
+            manifest = profiles.manifest_load(game / "manifest.json")
+            keys = sorted(k.name for k in (game / "keys").iterdir()) \
+                if (game / "keys").is_dir() else []
+            name = (manifest.name if manifest and manifest.name else "?")
+            _say(f"{game.name} ({name}): "
+                 f"{len(manifest.files) if manifest else 0} file(s), "
+                 f"profiles for {', '.join(keys) or 'none'}")
+        return 0
+
+    manifest = profiles.manifest_load(profiles.manifest_path(args.app_id, env))
+    if manifest is None:
+        _say(f"no profiles for app {args.app_id}")
+        return 1
+
+    if args.action == "show":
+        _say(f"{manifest.app_id} ({manifest.name or '?'}) roots={manifest.roots}")
+        for key in manifest.files:
+            _say(f"  swapped:  {key}")
+        for key in manifest.candidates:
+            _say(f"  observed: {key}")
+        for key in manifest.ignored:
+            _say(f"  ignored:  {key}")
+        keys_dir = profiles.game_dir(args.app_id, env) / "keys"
+        for key in sorted(keys_dir.iterdir()) if keys_dir.is_dir() else []:
+            _say(f"  profile {key.name}: "
+                 f"{len(gamefiles.stored_keys(key))} file(s)")
+        return 0
+
+    if args.action == "promote":
+        if args.path not in manifest.candidates + manifest.ignored:
+            _say(f"{args.path} is neither observed nor ignored for this game")
+            return 1
+        manifest.promote({args.path})
+        profiles.manifest_save(manifest, profiles.manifest_path(args.app_id, env))
+        _say(f"{args.path} will be swapped from the next launch")
+        return 0
+
+    if args.action == "forget":
+        shutil.rmtree(profiles.game_dir(args.app_id, env), ignore_errors=True)
+        _say(f"forgot every profile for app {args.app_id}")
+        return 0
+    return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="proteo",
                                 description="Client-matched virtual displays "
@@ -241,12 +447,29 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("status", help="show session and output state")
     sub.add_parser("rescue", help="force-restore physical displays (emergency)")
     sub.add_parser("guard", help="failsafe daemon (run via proteo-guard.service)")
+    profile = sub.add_parser(
+        "profile",
+        help="launch wrapper keeping game settings per display "
+             "(Steam launch options: proteo profile -- %%command%%)")
+    profile.add_argument("command", nargs=argparse.REMAINDER)
+    manage = sub.add_parser("profiles", help="inspect and edit learned profiles")
+    actions = manage.add_subparsers(dest="action", required=True)
+    actions.add_parser("list", help="games with learned profiles")
+    for name, helptext in (("show", "tracked files and stored profiles"),
+                           ("forget", "delete every profile for a game")):
+        one = actions.add_parser(name, help=helptext)
+        one.add_argument("app_id")
+    promote = actions.add_parser(
+        "promote", help="start swapping a file proteo is only observing")
+    promote.add_argument("app_id")
+    promote.add_argument("path")
     hold = sub.add_parser("_hold")  # internal: EVDI connection holder
     hold.add_argument("--edid", required=True)
 
     args = p.parse_args(argv)
     handler = {"do": cmd_do, "undo": cmd_undo, "status": cmd_status,
-               "rescue": cmd_rescue, "guard": cmd_guard, "_hold": cmd_hold}[args.cmd]
+               "rescue": cmd_rescue, "guard": cmd_guard, "_hold": cmd_hold,
+               "profile": cmd_profile, "profiles": cmd_profiles}[args.cmd]
     try:
         return handler(args)
     except Exception as e:  # noqa: BLE001 — prep_cmd needs a clean exit code

@@ -11,6 +11,7 @@ proteo.egg-info/entry_points.txt
 proteo.egg-info/top_level.txt
 proteo/adapters/__init__.py
 proteo/adapters/evdi.py
+proteo/adapters/gamefiles.py
 proteo/adapters/kscreen.py
 proteo/adapters/logind.py
 proteo/adapters/proc.py
@@ -20,10 +21,13 @@ proteo/core/edid.py
 proteo/core/guard.py
 proteo/core/layout.py
 proteo/core/model.py
+proteo/core/profiles.py
 proteo/core/state.py
 tests/test_config.py
 tests/test_edid.py
+tests/test_gamefiles.py
 tests/test_guard.py
 tests/test_layout.py
 tests/test_model.py
+tests/test_profiles.py
 tests/test_state.py

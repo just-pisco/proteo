@@ -18,7 +18,7 @@ import time
 from dataclasses import asdict
 
 from . import __version__
-from .adapters import evdi, gamefiles, kscreen, proc
+from .adapters import evdi, gamefiles, kscreen, proc, steamconfig
 from .core import guard, layout, profiles, state
 from .core.config import Config, load_config
 from .core.edid import make_edid
@@ -179,10 +179,30 @@ def cmd_guard(args) -> int:
             _say("guard: undo failed, attempting rescue")
             subprocess.run([sys.executable, "-m", "proteo", "rescue"])
 
+    steam_watcher = guard.SteamQuietWatcher(cfg.profile_hook_delay_seconds)
+
+    def rehook() -> None:
+        """Pick up games installed since the last pass, while Steam is closed."""
+        try:
+            root = steamconfig.steam_root()
+            if root is None:
+                return
+            apps = steamconfig.installed_app_ids(root)
+            pending = [a for config in steamconfig.user_config_paths(root)
+                       for a in steamconfig.missing_app_ids(config, apps)]
+            if pending:
+                _hook_launch_options(cfg, sorted(set(pending), key=int),
+                                     remove=False, quiet=True)
+        except Exception as e:  # noqa: BLE001 — never let this stop the failsafe
+            _say(f"guard: WARNING: could not update Steam launch options ({e})")
+
     def tick() -> bool:
         reason = guard.decide(observe())
         if debouncer.update(reason is not None):
             restore(reason or "invariant violated")
+        if cfg.profiles_enabled and cfg.profile_hook_auto and \
+                steam_watcher.update(steamconfig.is_running(), time.monotonic()):
+            rehook()
         return True  # keep the timer
 
     inhibitor = {"fd": -1}
@@ -381,8 +401,43 @@ def cmd_profile(args) -> int:
             _say(f"profile: WARNING: could not save profile ({e})")
 
 
+def _hook_launch_options(cfg: Config, app_ids: list[str], remove: bool,
+                         quiet: bool = False) -> int:
+    """Write proteo's wrapper into Steam's per-game launch options."""
+    root = steamconfig.steam_root()
+    if root is None:
+        _say("hook: no Steam installation found")
+        return 1
+    if steamconfig.is_running():
+        _say("hook: Steam is running — it rewrites its config on exit and "
+             "would revert this. Close Steam and try again.")
+        return 1
+
+    targets = app_ids or steamconfig.installed_app_ids(root)
+    if not targets:
+        _say("hook: no installed games found")
+        return 1
+
+    configs = steamconfig.user_config_paths(root)
+    if not configs:
+        _say("hook: no Steam user configuration found")
+        return 1
+
+    total = []
+    for config in configs:
+        total += steamconfig.apply_launch_options(config, targets, remove=remove)
+    verb = "unhooked" if remove else "hooked"
+    if total or not quiet:
+        _say(f"hook: {verb} {len(total)} game(s)"
+             + (f": {', '.join(sorted(set(total), key=int))}" if total else ""))
+    return 0
+
+
 def cmd_profiles(args) -> int:
     env = dict(os.environ)
+    if args.action == "hook":
+        return _hook_launch_options(load_config(), list(args.app_ids),
+                                    remove=args.remove)
     if args.action == "list":
         root = profiles.store_dir(env)
         games = sorted(d for d in root.iterdir() if d.is_dir()) \
@@ -455,6 +510,13 @@ def main(argv: list[str] | None = None) -> int:
     manage = sub.add_parser("profiles", help="inspect and edit learned profiles")
     actions = manage.add_subparsers(dest="action", required=True)
     actions.add_parser("list", help="games with learned profiles")
+    hook = actions.add_parser(
+        "hook", help="set Steam's launch options for every installed game "
+                     "(Steam must be closed)")
+    hook.add_argument("app_ids", nargs="*",
+                      help="app ids to hook; default: every installed game")
+    hook.add_argument("--remove", action="store_true",
+                      help="take the wrapper back out")
     for name, helptext in (("show", "tracked files and stored profiles"),
                            ("forget", "delete every profile for a game")):
         one = actions.add_parser(name, help=helptext)

@@ -95,12 +95,23 @@ A virtual display at the client's resolution has a side effect: the game reconfi
 runs borderless, follows whatever display it finds, and writes the result to its own
 config — so a session on the TV leaves a 1920x1080 window on a 32:9 monitor.
 
-Add proteo to a game's **launch options** in Steam (right-click the game →
-Properties → Launch Options):
+There is nothing to set up per game. With Steam closed:
 
+```sh
+proteo profiles hook          # every installed game; or pass specific app ids
 ```
-proteo profile -- %command%
-```
+
+From then on `proteo-guard` keeps it up to date on its own: whenever Steam has been
+closed for a moment it picks up games you have installed since. Steam keeps this
+config in memory and rewrites it on exit, so the hook only works while Steam is
+closed — it refuses to run otherwise rather than make an edit Steam would silently
+revert. Existing launch options are preserved (the wrapper is inserted just before
+`%command%`, so `WINEDLLOVERRIDES=... %command%` keeps working), the file is backed
+up before every write, and `proteo profiles hook --remove` undoes it.
+
+If you prefer to do it by hand, the equivalent launch option is
+`proteo profile -- %command%`, and `profile_hook_auto = false` stops the guard from
+touching Steam's config.
 
 From then on proteo keeps one copy of that game's settings per screen shape
 (`5120x1440`, `1920x1080`, …) and swaps the right one in at launch. The same rule

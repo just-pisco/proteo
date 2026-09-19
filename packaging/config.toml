@@ -61,3 +61,10 @@
 # For native (non-Proton) games only: XDG directories searched for a config
 # directory whose name matches the game. Proton games use their own prefix.
 #profile_native_roots = [".config", ".local/share"]
+
+# Keep Steam's per-game launch options hooked automatically: proteo-guard
+# re-applies them to newly installed games whenever Steam has been closed for
+# profile_hook_delay_seconds. Steam rewrites localconfig.vdf as it exits, so
+# edits are only durable once it is gone — hence the wait.
+#profile_hook_auto = true
+#profile_hook_delay_seconds = 20
