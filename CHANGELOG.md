@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Per-display game settings profiles** (`proteo profile -- %command%`, used as
+  a Steam launch option). A game started on a client-matched virtual display
+  reconfigures itself for that screen and leaves those settings behind for the
+  desk monitor — the counterpart problem to the one the virtual display solves.
+  Proteo now keeps one copy of a game's configuration per display shape and
+  swaps the right one in at launch.
+  - Profiles are keyed on **display geometry** (`5120x1440`, `1920x1080`), not
+    on the streaming mechanism, so the same rule covers Sunshine+proteo, Steam
+    Remote Play and simply plugging in another monitor.
+  - Which files belong to a profile is **learned**, not declared: the wrapper
+    fingerprints the game's config scope around each session. A Proton game's
+    scope is its own prefix; a native game gets only the XDG directories whose
+    name matches it (never `~/.config` wholesale).
+  - A file is swapped only once **two display shapes have been seen to hold
+    different content** for it. Files a game rewrites identically on every
+    launch — launcher component manifests, update metadata — are observed but
+    never swapped, so proteo cannot make them regress.
+  - Save data is kept out of range by an allow-list of configuration
+    extensions plus a path-word exclusion list (`save`, `profile`, `cloud`, …),
+    and every swap is preceded by a rotating backup (`profile_backups_kept`).
+  - `proteo profiles list|show|promote|forget` to inspect and correct what was
+    learned; `profiles_enabled = false` turns the whole thing off.
+  - The wrapper never blocks a launch: any failure in profile handling is
+    reported and the game starts unchanged, with the child's exit code and
+    termination signals forwarded through.
+
 ### Changed
 - Phase 4 (HDR) feasibility probe: **blocked upstream**. The evdi kernel module
   (1.14.15) does not expose the `Colorspace`/`HDR_OUTPUT_METADATA` DRM connector

@@ -37,6 +37,22 @@ class Config:
     host_unit: str = "app-dev.lizardbyte.app.Sunshine.service"
     guard_poll_seconds: int = 1
     guard_debounce: int = 2          # consecutive bad polls before restoring
+    # per-display game settings profiles (`proteo profile -- %command%`)
+    profiles_enabled: bool = True
+    # only these extensions may be swapped: an allow-list, because the cost of
+    # wrongly swapping a save file is lost progress
+    profile_extensions: tuple[str, ...] = (
+        "xml", "ini", "cfg", "conf", "json", "yaml", "yml", "settings",
+        "opt", "prefs", "props", "vdf")
+    # any path containing one of these words is never swapped — save data and
+    # anything else that must not travel between display shapes
+    profile_exclude: tuple[str, ...] = (
+        "save", "profile", "storage", "cloud", "screenshot", "log", "cache",
+        "crash", "telemetry", "backup", "tmp", "temp")
+    profile_max_bytes: int = 512 * 1024
+    profile_backups_kept: int = 5
+    # directories scanned for a native (non-Proton) game, relative to $HOME
+    profile_native_roots: tuple[str, ...] = (".config", ".local/share")
     extra: dict = field(default_factory=dict, compare=False)
 
 
@@ -57,6 +73,11 @@ def load_config(paths: list[Path] | None = None,
             continue
     known = {k: merged.pop(k) for k in list(merged)
              if k in Config.__dataclass_fields__ and k != "extra"}
+    # TOML arrays parse as lists; tuple-valued settings stay immutable like
+    # every other field of this frozen dataclass
+    for name, value in known.items():
+        if isinstance(Config.__dataclass_fields__[name].default, tuple):
+            known[name] = tuple(value)
     cfg = Config(**known, extra=merged)
     if cfg.physical_during_stream not in ("disable", "keep"):
         raise ValueError(

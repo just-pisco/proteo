@@ -88,6 +88,47 @@ dark by design (`physical_during_stream = "disable"`); they are restored when th
 stream ends — or automatically by the `proteo-guard` failsafe if anything crashes or
 the machine suspends. Emergency restore, also over SSH: `proteo rescue`.
 
+## Keeping game settings per screen
+
+A virtual display at the client's resolution has a side effect: the game reconfigures
+*itself* for that screen and keeps those settings when you come back to the desk. RDR2
+runs borderless, follows whatever display it finds, and writes the result to its own
+config — so a session on the TV leaves a 1920x1080 window on a 32:9 monitor.
+
+Add proteo to a game's **launch options** in Steam (right-click the game →
+Properties → Launch Options):
+
+```
+proteo profile -- %command%
+```
+
+From then on proteo keeps one copy of that game's settings per screen shape
+(`5120x1440`, `1920x1080`, …) and swaps the right one in at launch. The same rule
+covers Sunshine+proteo, Steam Remote Play and simply plugging in another monitor —
+the key is the screen, not how the pixels travel.
+
+Nothing is declared by hand: proteo watches which files the game changes around a
+session and learns. It is deliberately slow to trust them — a file is only swapped
+once **two different screens have been seen to hold different content** for it, so
+the first session on a new display only observes, and files a game rewrites
+identically every launch (launcher manifests, update metadata) are never swapped.
+
+Save games are kept out of range by construction: only configuration file extensions
+are eligible, and any path containing `save`, `profile`, `cloud` and friends is
+excluded — for RDR2 that is exactly the line between `Settings/system.xml` (tracked)
+and `Profiles/` (never touched). Every swap is preceded by a rotating backup under
+`~/.local/share/proteo/profiles/<appid>/backups/`.
+
+```sh
+proteo profiles list              # games with learned profiles
+proteo profiles show 1174180      # what is swapped, observed, ignored
+proteo profiles promote 1174180 <path>   # start swapping a file proteo left alone
+proteo profiles forget 1174180    # delete everything learned for a game
+```
+
+If anything goes wrong the game still launches, unchanged. Set
+`profiles_enabled = false` to turn the feature off entirely.
+
 ## Status
 
 **0.1.1.** Working end-to-end in real Moonlight sessions: client-matched virtual

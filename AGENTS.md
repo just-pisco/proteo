@@ -114,6 +114,52 @@ Findings, in decision order:
 - `undo`: tears the virtual output down and restores the physical monitor configuration
   exactly as it was. Safe to call without a prior `do` (no-op that still restores).
 
+## Per-display game settings profiles (Phase 5)
+
+The virtual display solves half the shape problem; this solves the other half. A game
+launched onto a 1920x1080 virtual display reconfigures *itself* for that screen and
+writes it to its own config — and that config is still there when you sit back at the
+32:9. RDR2 is the reference case: borderless (`windowed=2`), so it follows whatever
+display it finds and rewrites `screenWidthWindowed`/`screenHeightWindowed`.
+
+Design decisions, and why:
+
+- **Keyed on display geometry, never on the streaming mechanism.** `display_key()`
+  returns e.g. `5120x1440` from the primary enabled output's mode size (mode size, not
+  logical size: fractional scaling must not change the key; axes swap when rotated).
+  One rule covers Sunshine+proteo, Steam Remote Play and a plugged-in second monitor,
+  and proteo never has to ask "am I streaming?".
+- **Hooked at the game, not at the session.** `global_prep_cmd` fires for the Sunshine
+  *app* (Steam Big Picture), which knows nothing about which game you then start. The
+  hook is therefore a launch wrapper in Steam's per-game launch options,
+  `proteo profile -- %command%` — also the only place that can swap a file *before*
+  the game reads it. A watcher polling for new processes always arrives too late.
+- **Scope comes from Steam, and is never guessed.** `STEAM_COMPAT_DATA_PATH` names a
+  Proton prefix, a per-game container by construction. If it is set but absent, the
+  answer is "no scope": falling back to `$HOME` would put unrelated application
+  settings in swapping range. Native games get only XDG subdirectories whose name
+  matches the game (`name_hints`), never `~/.config` as a whole.
+- **Two-stage promotion is the core safety property.** Discovery records what changed
+  during a session (`size, mtime_ns` fingerprints — cheap enough to run on every
+  launch). A file is only *swapped* once `discriminating()` sees two display keys
+  holding different content for it. Launcher component manifests and update metadata,
+  which a game rewrites identically every launch, stay `candidates` forever and can
+  never be made to regress. Cost: the first session on a new screen only observes.
+- **Save data is structurally out of range**: an allow-list of config extensions, a
+  512 KiB ceiling, and a path-word exclusion list. RDR2 is the worked example — config
+  in `Settings/system.xml` (tracked), saves in `Profiles/` (excluded by the word
+  `profile`). Every swap is preceded by a rotating backup. If this guard is ever
+  loosened, the failure mode is lost save games, so treat `profile_exclude` as
+  load-bearing.
+- **A profile is never worth a failed launch.** Every stage is wrapped: on any error
+  the session deactivates, the game runs unchanged, and the child's exit code and
+  termination signals are forwarded so Steam's Stop button still works.
+
+Layout: `core/profiles.py` (pure: key, classification, manifest, promotion evidence),
+`adapters/gamefiles.py` (scope discovery, scanning, copying, backups — filesystem only,
+so it is tested too, unlike the display adapters). Store lives under `XDG_DATA_HOME`,
+not `XDG_RUNTIME_DIR`: unlike session state, profiles must survive reboots.
+
 ## Robustness requirements (this is 70% of the project's value)
 
 Implemented in Phase 2 by `proteo guard` (systemd user unit `proteo-guard.service`,

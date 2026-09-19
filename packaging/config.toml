@@ -38,3 +38,26 @@
 #host_unit = "app-dev.lizardbyte.app.Sunshine.service"
 #guard_poll_seconds = 1
 #guard_debounce = 2
+
+# ---------------------------------------------------------------------------
+# Per-display game settings profiles  (`proteo profile -- %command%`)
+# ---------------------------------------------------------------------------
+# Keep one copy of a game's configuration per screen shape, so a game played on
+# the TV does not leave its resolution behind on the desk monitor.
+#profiles_enabled = true
+
+# Only these extensions may ever be swapped (allow-list).
+#profile_extensions = ["xml", "ini", "cfg", "conf", "json", "yaml", "yml",
+#                      "settings", "opt", "prefs", "props", "vdf"]
+
+# Any path containing one of these words is never swapped. This is what keeps
+# save games out of the profiles — edit with care.
+#profile_exclude = ["save", "profile", "storage", "cloud", "screenshot", "log",
+#                   "cache", "crash", "telemetry", "backup", "tmp", "temp"]
+
+#profile_max_bytes = 524288    # 512 KiB: bigger files are not settings
+#profile_backups_kept = 5      # copies kept before each swap
+
+# For native (non-Proton) games only: XDG directories searched for a config
+# directory whose name matches the game. Proton games use their own prefix.
+#profile_native_roots = [".config", ".local/share"]
