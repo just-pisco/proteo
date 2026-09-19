@@ -10,3 +10,4 @@ debian/*.debhelper.log
 *.egg-info/
 __pycache__/
 *.pyc
+build/
